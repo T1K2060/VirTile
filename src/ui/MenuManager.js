@@ -481,11 +481,14 @@ export class MenuManager {
   }
 
   show(panelName) {
+    console.log('Showing panel:', panelName);
+    
     // Hide current panel
     if (this.currentPanel) {
       const panel = this.panels[this.currentPanel];
       if (panel) {
         panel.classList.add('hidden');
+        console.log('Hid panel:', this.currentPanel);
       }
     }
     
@@ -495,6 +498,9 @@ export class MenuManager {
     if (newPanel) {
       newPanel.classList.remove('hidden');
       newPanel.classList.add('fade-in');
+      console.log('Showed panel:', panelName);
+    } else {
+      console.warn('Panel not found:', panelName, 'Available:', Object.keys(this.panels));
     }
     
     // Special handling for specific panels
@@ -502,6 +508,10 @@ export class MenuManager {
       this.refreshSongList();
       this.stopPreview();
     } else if (panelName === 'home-screen') {
+      // Load recommended songs if not loaded
+      if (this.recommendedSongs.length === 0) {
+        this.loadRecommendedSongs();
+      }
       // Restart visualizer if we have a selected song
       if (this.selectedSong && this.visualizer) {
         this.visualizer.start(this.selectedSong.meta.bpm || 128);

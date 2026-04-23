@@ -124,17 +124,19 @@ export class LoadingScreen {
   async fadeOut() {
     this.initElements();
     return new Promise(resolve => {
-      if (this.elements.content) {
-        this.elements.content.classList.add('fade-out');
+      if (this.elements.container) {
+        // Fade out the entire container
+        this.elements.container.style.transition = 'opacity 0.5s ease';
+        this.elements.container.style.opacity = '0';
         
         // Wait for fade animation to complete
         setTimeout(() => {
-          // Hide content completely but keep background
-          this.elements.content.style.display = 'none';
-          
-          // Important: Keep the loading-screen container visible
-          // so the background stays! Only hide the content.
-          
+          // Hide entire loading screen so menus are accessible
+          this.elements.container.style.display = 'none';
+          this.elements.container.style.pointerEvents = 'none';
+          this.elements.container.style.zIndex = '-1';
+          this.elements.container.style.visibility = 'hidden';
+          console.log('Loading screen hidden');
           resolve();
         }, 500); // Match CSS transition time
       } else {
@@ -158,9 +160,13 @@ export class LoadingScreen {
   // Show loading screen again (for level transitions)
   showAgain() {
     this.initElements();
+    if (this.elements.container) {
+      this.elements.container.style.display = 'block';
+      this.elements.container.style.opacity = '1';
+      this.elements.container.style.pointerEvents = 'none';
+    }
     if (this.elements.content) {
       this.elements.content.style.display = 'flex';
-      this.elements.content.classList.remove('fade-out');
       this.elements.content.style.opacity = '1';
     }
   }

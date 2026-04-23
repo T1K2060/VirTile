@@ -9,7 +9,8 @@ export class LevelLoader {
   constructor() {
     // Default GitHub repository for beatmaps
     // Structure: Levels/SongName/map data (Song.mp3, Icon.png, Hard.json, etc.)
-    this.baseUrl = 'https://raw.githubusercontent.com/T1K2060/Levels/main/';
+    // Correct raw GitHub URL format: /refs/heads/main/
+    this.baseUrl = 'https://raw.githubusercontent.com/T1K2060/Levels/refs/heads/main/';
     this.levelsPath = 'Levels/';
     
     // Cache for loaded levels
@@ -25,6 +26,10 @@ export class LevelLoader {
       // Convert GitHub web URL to raw URL
       url = url.replace('github.com', 'raw.githubusercontent.com');
       url = url.replace('/tree/', '/');
+      // Ensure proper refs/heads/main format for raw GitHub
+      if (!url.includes('refs/heads/') && url.includes('/main/')) {
+        url = url.replace('/main/', '/refs/heads/main/');
+      }
     }
     this.baseUrl = url.endsWith('/') ? url : url + '/';
   }
@@ -114,10 +119,10 @@ export class LevelLoader {
   }
 
   /**
-   * Load metadata from meta.json
+   * Load metadata from meta.txt (text format)
    */
   async loadMetadata(levelName) {
-    const metaUrl = `${this.baseUrl}${levelName}/meta.json`;
+    const metaUrl = this.buildUrl(levelName, 'meta.txt');
     
     try {
       const response = await fetch(metaUrl);
@@ -127,16 +132,19 @@ export class LevelLoader {
       
       const meta = await response.json();
       
+      // Handle both formats: { meta: {...} } or direct {...}
+      const metaData = meta.meta || meta;
+      
       // Validate and set defaults
       return {
-        title: meta.title || levelName,
-        artist: meta.artist || 'Unknown Artist',
-        mapper: meta.mapper || 'Unknown Mapper',
-        bpm: meta.bpm || 120,
-        duration: meta.duration || 0,
-        previewTime: meta.previewTime || 0,
-        tags: meta.tags || [],
-        ...meta
+        title: metaData.song_name || metaData.title || levelName,
+        artist: metaData.artist || 'Unknown Artist',
+        mapper: metaData.mapper || 'Unknown Mapper',
+        bpm: metaData.bpm || 120,
+        duration: metaData.duration || 0,
+        previewTime: metaData.previewTime || 20,
+        tags: metaData.tags || [],
+        ...metaData
       };
       
     } catch (error) {
