@@ -15,9 +15,6 @@ export class LevelLoader {
     
     // Cache for loaded levels
     this.cache = new Map();
-    
-    // Difficulty order for sorting (lower index = easier)
-    this.difficultyOrder = ['easy', 'normal', 'hard', 'expert', 'mania', 'maniac'];
   }
 
   setBaseUrl(url) {
@@ -58,16 +55,11 @@ export class LevelLoader {
   }
 
   /**
-   * Get difficulty sort order
+   * Get sort order based on star rating
+   * Charts are sorted by star rating (lowest to highest)
    */
-  getDifficultyOrder(filename) {
-    const name = filename.toLowerCase().replace('.json', '');
-    for (let i = 0; i < this.difficultyOrder.length; i++) {
-      if (name.includes(this.difficultyOrder[i])) {
-        return i;
-      }
-    }
-    return 999; // Unknown difficulties go last
+  getDifficultyOrder(chart) {
+    return chart.starRating || 0;
   }
 
   /**
@@ -120,6 +112,7 @@ export class LevelLoader {
 
   /**
    * Load metadata from meta.txt (text format)
+   * Supports both JSON content and key=value format
    */
   async loadMetadata(levelName) {
     const metaUrl = this.buildUrl(levelName, 'meta.txt');
@@ -130,10 +123,30 @@ export class LevelLoader {
         throw new Error(`HTTP ${response.status}`);
       }
       
-      const meta = await response.json();
+      const text = await response.text();
+      let metaData = {};
       
-      // Handle both formats: { meta: {...} } or direct {...}
-      const metaData = meta.meta || meta;
+      // Try to parse as JSON first
+      try {
+        const json = JSON.parse(text);
+        metaData = json.meta || json;
+      } catch (e) {
+        // Not JSON, parse as key=value format
+        text.split('\n').forEach(line => {
+          const [key, ...valueParts] = line.split('=');
+          if (key && valueParts.length > 0) {
+            const value = valueParts.join('=').trim();
+            // Try to parse numbers
+            if (!isNaN(value) && value !== '') {
+              metaData[key.trim()] = Number(value);
+            } else if (value === 'true' || value === 'false') {
+              metaData[key.trim()] = value === 'true';
+            } else {
+              metaData[key.trim()] = value;
+            }
+          }
+        });
+      }
       
       // Validate and set defaults
       return {
@@ -148,7 +161,7 @@ export class LevelLoader {
       };
       
     } catch (error) {
-      console.warn(`No meta.json found for ${levelName}, using defaults`);
+      console.warn(`No meta.txt found for ${levelName}, using defaults`);
       return {
         title: levelName,
         artist: 'Unknown Artist',
@@ -179,7 +192,7 @@ export class LevelLoader {
           const displayName = this.getDifficultyDisplayName(name + '.json');
           chart.displayName = displayName;
           chart.fileName = name + '.json';
-          chart.sortOrder = this.getDifficultyOrder(name + '.json');
+          chart.sortOrder = this.getDifficultyOrder(chart);
           charts[displayName] = chart;
           chartFiles.push({ name: displayName, chart, sortOrder: chart.sortOrder });
         }
@@ -188,7 +201,7 @@ export class LevelLoader {
       }
     }
     
-    // Sort charts by difficulty (easy to hard, left to right)
+    // Sort charts by star rating (lowest to highest, left to right)
     chartFiles.sort((a, b) => a.sortOrder - b.sortOrder);
     
     // Store sorted chart list
@@ -353,7 +366,7 @@ export class LevelLoader {
       sortOrder: chart.sortOrder || 999
     }));
     
-    // Sort by difficulty order
+    // Sort by star rating (lowest to highest)
     return difficulties.sort((a, b) => a.sortOrder - b.sortOrder);
   }
 
