@@ -175,19 +175,54 @@ export class LevelLoader {
   }
 
   /**
-   * Load all available chart files (discover all .json files in the folder)
+   * Load all available chart files
+   * First tries to load charts.json index, then falls back to discovery
    */
   async loadCharts(levelName, meta) {
     const charts = {};
     const chartFiles = [];
     
-    // Common chart file names to try
+    // Try to load charts.json index file first (lists available charts)
+    try {
+      const indexUrl = this.buildUrl(levelName, 'charts.json');
+      const response = await fetch(indexUrl);
+      if (response.ok) {
+        const index = await response.json();
+        const chartList = index.charts || index.files || [];
+        
+        for (const filename of chartList) {
+          try {
+            const name = filename.replace('.json', '');
+            const chart = await this.loadChartFile(levelName, name);
+            if (chart) {
+              const displayName = this.getDifficultyDisplayName(filename);
+              chart.displayName = displayName;
+              chart.fileName = filename;
+              chart.sortOrder = this.getDifficultyOrder(chart);
+              charts[displayName] = chart;
+              chartFiles.push({ name: displayName, chart, sortOrder: chart.sortOrder });
+            }
+          } catch (error) {
+            // Skip invalid charts
+          }
+        }
+        
+        if (chartFiles.length > 0) {
+          chartFiles.sort((a, b) => a.sortOrder - b.sortOrder);
+          this.lastChartList = chartFiles.map(c => ({ name: c.name, fileName: c.chart.fileName }));
+          return charts;
+        }
+      }
+    } catch (error) {
+      // No charts.json, continue to discovery
+    }
+    
+    // Silent discovery - only log success, not failures
     const commonNames = ['Easy', 'Normal', 'Hard', 'Expert', 'Maniac', 'Mania', 'Chart'];
     
-    // Try to discover chart files
     for (const name of commonNames) {
       try {
-        const chart = await this.loadChartFile(levelName, name);
+        const chart = await this.loadChartFileSilent(levelName, name);
         if (chart) {
           const displayName = this.getDifficultyDisplayName(name + '.json');
           chart.displayName = displayName;
@@ -195,9 +230,10 @@ export class LevelLoader {
           chart.sortOrder = this.getDifficultyOrder(chart);
           charts[displayName] = chart;
           chartFiles.push({ name: displayName, chart, sortOrder: chart.sortOrder });
+          console.log(`Loaded chart: ${displayName} (${chart.starRating}★)`);
         }
       } catch (error) {
-        // File doesn't exist
+        // Silently skip missing charts
       }
     }
     
@@ -208,6 +244,25 @@ export class LevelLoader {
     this.lastChartList = chartFiles.map(c => ({ name: c.name, fileName: c.chart.fileName }));
     
     return charts;
+  }
+
+  /**
+   * Load a chart file silently (no 404 console spam)
+   */
+  async loadChartFileSilent(levelName, fileName) {
+    const chartUrl = this.buildUrl(levelName, `${fileName}.json`);
+    
+    try {
+      const response = await fetch(chartUrl);
+      if (!response.ok) {
+        return null;
+      }
+      
+      const chartData = await response.json();
+      return this.parseChart(chartData, fileName);
+    } catch (error) {
+      return null;
+    }
   }
 
   /**
