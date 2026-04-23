@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>VirTile - 3D Rhythm Game</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Three.js for 3D rendering -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Loading Screen - Roblox Style -->
+  <div id="loading-screen">
+    <!-- Background (stays forever) -->
+    <div id="loading-background"></div>
+    
+    <!-- Content (fades out) -->
+    <div id="loading-content">
+      <!-- Title -->
+      <div id="loading-title">VirTile</div>
+      
+      <!-- Version -->
+      <div id="loading-version">v0.0.1</div>
+      
+      <!-- Info text - changes: Loading Assets -> Grabbing Levels -> Done -->
+      <div id="loading-info">Loading Assets</div>
+      
+      <!-- Assets counter -->
+      <div id="loading-assets">0 / 0</div>
+      
+      <!-- Loading Bar -->
+      <div id="loading-bar-container">
+        <div id="loading-bar">
+          <div id="loading-bar-slider"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Battery Warning -->
+  <div id="battery-warning" class="hidden">
+    <span class="battery-icon">🔋</span>
+    <span>Low Battery - Energy Save Mode Active</span>
+  </div>
+
+  <!-- Main Canvas Container -->
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- VR Button (shown when VR available) -->
+  <button id="vr-button" class="vr-enter-btn hidden">Enter VR</button>
+  <button id="vr-exit-button" class="vr-exit-btn hidden">Exit VR</button>
+
+  <!-- UI Overlay Layer -->
+  <div id="ui-layer">
+    <!-- Audio Visualizer Background (for home screen) -->
+    <div id="audio-visualizer-bg" class="hidden">
+      <canvas id="visualizer-canvas"></canvas>
+      <div id="visualizer-particles"></div>
+    </div>
+
+    <!-- Home Screen -->
+    <div id="home-screen" class="menu-panel">
+      <!-- Background -->
+      <div id="home-background"></div>
+      
+      <!-- HotBar (Left Sidebar) -->
+      <div id="hotbar" class="drop-in-left">
+        <div class="hotbar-bg"></div>
+        <div class="hotbar-content">
+          <button class="hotbar-btn active" data-action="solo" title="Solo">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </button>
+          <button class="hotbar-btn" data-action="settings" title="Settings">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L4.08 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          </button>
+          <button class="hotbar-btn" data-action="leaderboard-hotbar" title="Leaderboard">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 21H2V9h5.5v12zm7.25-18h-5.5v18h5.5V3zM22 11h-5.5v10H22V11z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div id="home-title" class="slide-in-top">VirTile</div>
+
+      <!-- Main Buttons -->
+      <div id="home-buttons" class="home-buttons-container">
+        <!-- Solo Button (Large, Featured) -->
+        <div id="solo-panel" class="home-panel drop-in-bottom">
+          <div class="panel-bg"></div>
+          <div class="panel-content">
+            <div class="panel-header">
+              <h2>Recommended</h2>
+              <span class="star-rating">★★★☆☆</span>
+            </div>
+            <div id="recommended-songs" class="recommended-list">
+              <!-- Recommended songs populated here -->
+              <div class="loading-text">Loading recommendations...</div>
+            </div>
+            <button class="panel-btn main-btn" data-action="solo">Play Solo</button>
+          </div>
+        </div>
+
+        <!-- Multiplayer Button -->
+        <div id="multiplayer-panel" class="home-panel-small drop-in-right" style="animation-delay: 0.1s;">
+          <div class="panel-bg"></div>
+          <button class="panel-btn" data-action="multiplayer" disabled>
+            <span class="btn-icon">👥</span>
+            <span class="btn-text">Multiplayer</span>
+            <span class="btn-subtext">Coming Soon</span>
+          </button>
+        </div>
+
+        <!-- Leaderboard Button -->
+        <div id="leaderboard-panel" class="home-panel-small drop-in-right" style="animation-delay: 0.2s;">
+          <div class="panel-bg"></div>
+          <button class="panel-btn" data-action="leaderboard" disabled>
+            <span class="btn-icon">🏆</span>
+            <span class="btn-text">Leaderboard</span>
+            <span class="btn-subtext">Coming Soon</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview Player (Hidden initially) -->
+      <div id="preview-player" class="hidden">
+        <div class="preview-info">
+          <span id="preview-title">No song selected</span>
+          <button id="preview-play-btn" class="preview-btn">▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Song Select Screen (Solo Menu) -->
+    <div id="song-select" class="menu-panel hidden">
+      <div id="song-select-bg"></div>
+      
+      <!-- Audio Visualizer Background -->
+      <div id="song-visualizer-bg" class="visualizer-container">
+        <canvas id="song-visualizer-canvas"></canvas>
+      </div>
+      
+      <!-- Song List Panel (Left) -->
+      <div id="song-list-panel" class="song-panel drop-in-left">
+        <div class="panel-gradient"></div>
+        <div class="panel-content">
+          <div class="recommended-badge hidden" id="daily-recommended">★ Recommended Today</div>
+          <div id="song-list" class="song-list-scroll">
+            <!-- Song bars populated here -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Song Info Panel (Right) -->
+      <div id="song-info-panel" class="song-panel drop-in-right">
+        <div class="panel-gradient"></div>
+        <div class="panel-content song-info-content">
+          <div id="song-info-icon" class="song-info-icon">
+            <img src="" alt="Song Icon" id="info-icon-img" class="hidden">
+            <div class="icon-placeholder">🎵</div>
+          </div>
+          
+          <div class="song-info-details">
+            <div class="info-row">
+              <span class="info-label">Song:</span>
+              <span id="info-song-name" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Artist:</span>
+              <span id="info-artist" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Mapper:</span>
+              <span id="info-mapper" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Difficulty:</span>
+              <span id="info-difficulty" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Star:</span>
+              <span id="info-star" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Ranked:</span>
+              <span id="info-ranked" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Chart Type:</span>
+              <span id="info-chart-type" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">BPM:</span>
+              <span id="info-bpm" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Offset:</span>
+              <span id="info-offset" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Note Speed:</span>
+              <span id="info-note-speed" class="info-value">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Duration:</span>
+              <span id="info-duration" class="info-value">-</span>
+            </div>
+          </div>
+          
+          <!-- Difficulty Selector -->
+          <div class="difficulty-selector">
+            <span class="selector-label">Difficulty:</span>
+            <div id="difficulty-buttons" class="difficulty-buttons">
+              <!-- Difficulty buttons populated here -->
+            </div>
+          </div>
+          
+          <button id="play-song-btn" class="play-btn" data-action="play-selected">
+            Play
+          </button>
+        </div>
+      </div>
+      
+      <!-- Bottom HotBar -->
+      <div id="song-hotbar" class="drop-in-bottom">
+        <div class="hotbar-gradient"></div>
+        <div class="hotbar-content horizontal">
+          <button class="hotbar-btn" data-action="back-to-home" title="Back">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <button class="hotbar-btn active" title="Solo">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </button>
+          <button class="hotbar-btn" data-action="settings" title="Settings">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L4.08 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          </button>
+          <button class="hotbar-btn" data-action="leaderboard-hotbar" title="Leaderboard">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 21H2V9h5.5v12zm7.25-18h-5.5v18h5.5V3zM22 11h-5.5v10H22V11z"/></svg>
+          </button>
+          <button class="hotbar-btn" data-action="modifiers" title="Modifiers" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l-5.5 9h11z M12 5.84L13.93 9h-3.87z M17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5z M5 21.5h8v-8H5v8z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settings-menu" class="menu-panel hidden">
+      <h2>Settings</h2>
+      
+      <div class="settings-section">
+        <h3>Platform Mode</h3>
+        <div class="setting-row">
+          <label>Current Mode:</label>
+          <select id="platform-mode">
+            <option value="auto">Auto-Detect</option>
+            <option value="pc">PC (2D)</option>
+            <option value="pcvr">PC VR</option>
+            <option value="mobile">Mobile</option>
+            <option value="tablet">Tablet</option>
+            <option value="standalone-vr">Standalone VR</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Graphics Quality</h3>
+        <div class="setting-row">
+          <label>Quality:</label>
+          <select id="graphics-quality">
+            <option value="ultra">Ultra</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+            <option value="minimal">Minimal</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Energy Save on Low Battery:</label>
+          <input type="checkbox" id="energy-save" checked>
+        </div>
+        <div class="setting-row">
+          <label>Auto-reduce at %:</label>
+          <input type="number" id="battery-threshold" value="15" min="5" max="50">
+        </div>
+      </div>
+
+      <div class="settings-section" id="vr-settings">
+        <h3>VR Settings</h3>
+        <div class="setting-row">
+          <label>VR Mode:</label>
+          <select id="vr-mode">
+            <option value="2d-flat">2D Flat Screen (in 3D space)</option>
+            <option value="3d-immersive">3D Immersive (Beat Saber style)</option>
+          </select>
+        </div>
+        <div class="setting-row" id="flat-screen-settings">
+          <label>Screen Size:</label>
+          <input type="range" id="vr-screen-size" min="0.5" max="3" step="0.1" value="1.5">
+          <label>Screen Distance:</label>
+          <input type="range" id="vr-screen-distance" min="1" max="5" step="0.1" value="2">
+          <label>Screen Curvature:</label>
+          <input type="range" id="vr-screen-curve" min="0" max="1" step="0.1" value="0.3">
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Audio</h3>
+        <div class="setting-row">
+          <label>Master Volume:</label>
+          <input type="range" id="master-volume" min="0" max="100" value="80">
+        </div>
+        <div class="setting-row">
+          <label>Hitsound Volume:</label>
+          <input type="range" id="hitsound-volume" min="0" max="100" value="60">
+        </div>
+        <div class="setting-row">
+          <label>Offset (ms):</label>
+          <input type="number" id="audio-offset" value="0" step="1">
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Level Repository</h3>
+        <div class="setting-row">
+          <label>Levels URL:</label>
+          <input type="text" id="levels-url" value="https://github.com/T1K2060/Levels/tree/main/Levels/" style="width: 300px;">
+        </div>
+        <button class="menu-btn" data-action="save-levels-url">Save & Reload</button>
+      </div>
+
+      <div class="settings-section">
+        <h3>Gameplay</h3>
+        <div class="setting-row">
+          <label>Scroll Speed:</label>
+          <input type="range" id="scroll-speed" min="1" max="10" step="0.1" value="5">
+        </div>
+        <div class="setting-row">
+          <label>Note Size:</label>
+          <input type="range" id="note-size" min="0.5" max="2" step="0.1" value="1">
+        </div>
+      </div>
+
+      <button class="back-btn" data-action="back-to-main">Back</button>
+    </div>
+
+    <!-- Game Loading / Alignment Screen -->
+    <div id="game-loading-overlay" class="hidden">
+      <div class="game-loading-bg"></div>
+      <div class="game-loading-content">
+        <div class="loading-status">Aligning Audio...</div>
+        <div class="fps-counter">FPS: <span id="loading-fps">--</span></div>
+        <div class="loading-progress">
+          <div class="loading-bar">
+            <div class="loading-progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Countdown Overlay -->
+    <div id="countdown-overlay" class="hidden">
+      <div class="countdown-number">3</div>
+    </div>
+
+    <!-- In-Game HUD (VirTile Style) -->
+    <div id="game-hud" class="hidden">
+      <div class="gameplay-bg"></div>
+      
+      <!-- Score Bar (Top Left) -->
+      <div id="score-bar" class="hud-panel">
+        <div class="panel-gradient"></div>
+        <div class="score-content">
+          <div id="score-display" class="score-value">000000</div>
+          <div id="accuracy-display" class="accuracy-value">%00.00</div>
+        </div>
+      </div>
+      
+      <!-- Note Lane Visual (Center) -->
+      <div id="note-lane-visual" class="lane-container">
+        <div class="lane-gradient"></div>
+        <div class="lane-lines">
+          <div class="lane-line"></div>
+          <div class="lane-line"></div>
+          <div class="lane-line"></div>
+          <div class="lane-line"></div>
+        </div>
+      </div>
+      
+      <!-- Note Hitboxes / Keys (4 lanes) -->
+      <div id="note-hitboxes" class="hitbox-container">
+        <div class="hitbox-row">
+          <div class="hitbox" data-lane="0">
+            <div class="hitbox-outer"></div>
+            <div class="hitbox-inner"></div>
+            <span class="key-label">D</span>
+          </div>
+          <div class="hitbox" data-lane="1">
+            <div class="hitbox-outer"></div>
+            <div class="hitbox-inner"></div>
+            <span class="key-label">F</span>
+          </div>
+          <div class="hitbox" data-lane="2">
+            <div class="hitbox-outer"></div>
+            <div class="hitbox-inner"></div>
+            <span class="key-label">J</span>
+          </div>
+          <div class="hitbox" data-lane="3">
+            <div class="hitbox-outer"></div>
+            <div class="hitbox-inner"></div>
+            <span class="key-label">K</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- PP Bar (Bottom Left) -->
+      <div id="pp-container" class="hud-panel pp-panel">
+        <div class="panel-gradient"></div>
+        <div class="pp-content">
+          <div id="pp-number" class="pp-value">0</div>
+          <div class="pp-bar-container">
+            <div class="pp-bar-bg"></div>
+            <div id="pp-bar" class="pp-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Judgment Display (Center) -->
+      <div id="judgment-display" class="hidden">
+        <div id="judgment-text" class="judgment-text">Perfect+</div>
+        <div id="judgment-ms" class="judgment-ms">0ms</div>
+      </div>
+      
+      <!-- Health Bar (Top Right) -->
+      <div id="health-bar" class="hud-panel health-panel">
+        <div class="panel-gradient"></div>
+        <div class="health-content">
+          <div class="health-bar-bg">
+            <div id="health-fill" class="health-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Combo Display -->
+      <div id="combo-display" class="combo-container">
+        <div id="combo-count" class="combo-value">0</div>
+        <div class="combo-label">COMBO</div>
+      </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="menu-panel hidden">
+      <h2>Paused</h2>
+      <button class="menu-btn" data-action="resume">Resume</button>
+      <button class="menu-btn" data-action="restart">Restart</button>
+      <button class="menu-btn" data-action="quit">Quit to Menu</button>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="menu-panel hidden">
+      <h2>Results</h2>
+      <div class="results-stats">
+        <div class="final-score">Score: 0</div>
+        <div class="final-accuracy">Accuracy: 0%</div>
+        <div class="final-rank">Rank: F</div>
+        <div class="judgment-breakdown">
+          <div>Perfect: <span id="count-perfect">0</span></div>
+          <div>Great: <span id="count-great">0</span></div>
+          <div>Good: <span id="count-good">0</span></div>
+          <div>Miss: <span id="count-miss">0</span></div>
+        </div>
+      </div>
+      <button class="menu-btn" data-action="retry">Retry</button>
+      <button class="menu-btn" data-action="back-to-songs">Song Select</button>
+    </div>
+
+    <!-- Virtual Keyboard (for VR) -->
+    <div id="virtual-keyboard" class="hidden">
+      <div class="keyboard-display"></div>
+      <div class="keyboard-keys">
+        <div class="kb-row">
+          <button class="kb-key">1</button><button class="kb-key">2</button><button class="kb-key">3</button>
+          <button class="kb-key">4</button><button class="kb-key">5</button><button class="kb-key">6</button>
+          <button class="kb-key">7</button><button class="kb-key">8</button><button class="kb-key">9</button>
+          <button class="kb-key">0</button>
+        </div>
+        <div class="kb-row">
+          <button class="kb-key">Q</button><button class="kb-key">W</button><button class="kb-key">E</button>
+          <button class="kb-key">R</button><button class="kb-key">T</button><button class="kb-key">Y</button>
+          <button class="kb-key">U</button><button class="kb-key">I</button><button class="kb-key">O</button>
+          <button class="kb-key">P</button>
+        </div>
+        <div class="kb-row">
+          <button class="kb-key">A</button><button class="kb-key">S</button><button class="kb-key">D</button>
+          <button class="kb-key">F</button><button class="kb-key">G</button><button class="kb-key">H</button>
+          <button class="kb-key">J</button><button class="kb-key">K</button><button class="kb-key">L</button>
+        </div>
+        <div class="kb-row">
+          <button class="kb-key">Z</button><button class="kb-key">X</button><button class="kb-key">C</button>
+          <button class="kb-key">V</button><button class="kb-key">B</button><button class="kb-key">N</button>
+          <button class="kb-key">M</button>
+          <button class="kb-key kb-space">SPACE</button>
+          <button class="kb-key kb-backspace">⌫</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FPS Counter (debug) -->
+  <div id="fps-counter">60 FPS</div>
+
+  <!-- Main Game Script -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

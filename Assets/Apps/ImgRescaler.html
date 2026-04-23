@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1:1 Image Downscaler</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  input, button { margin: 5px 0; }
+  canvas { display: block; margin-top: 20px; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+
+<h2>1:1 Image Downscaler</h2>
+
+<input type="file" id="imageInput" accept="image/*"><br>
+<label>Downscale size (px): </label>
+<input type="number" id="sizeInput" value="128"><br>
+<button id="downscaleBtn">Downscale Image</button>
+
+<canvas id="canvas"></canvas>
+<a id="downloadLink" style="display:block; margin-top:10px;">Download Image</a>
+
+<script>
+const imageInput = document.getElementById('imageInput');
+const sizeInput = document.getElementById('sizeInput');
+const downscaleBtn = document.getElementById('downscaleBtn');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const downloadLink = document.getElementById('downloadLink');
+
+let img = new Image();
+
+imageInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    img.src = event.target.result;
+  }
+  reader.readAsDataURL(file);
+});
+
+downscaleBtn.addEventListener('click', () => {
+  if (!img.src) return alert("Please upload an image first.");
+
+  const targetSize = parseInt(sizeInput.value);
+  if (isNaN(targetSize) || targetSize <= 0) return alert("Invalid size.");
+
+  // Ensure 1:1 by taking the smaller dimension
+  const minSide = Math.min(img.width, img.height);
+
+  // Set canvas to target size
+  canvas.width = targetSize;
+  canvas.height = targetSize;
+
+  // Draw image downscaled 1:1
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    img,
+    0, 0, minSide, minSide, // crop the image to 1:1
+    0, 0, targetSize, targetSize // scale it to target
+  );
+
+  // Prepare download
+  downloadLink.href = canvas.toDataURL('image/png');
+  downloadLink.download = `downscaled_${targetSize}px.png`;
+  downloadLink.textContent = "Download Downscaled Image";
+});
+</script>
+
+</body>
+</html>
